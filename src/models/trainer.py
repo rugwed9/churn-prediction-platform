@@ -167,7 +167,10 @@ class ModelTrainer:
         # Compute scale_pos_weight for class imbalance
         neg_count = (y_train == 0).sum()
         pos_count = (y_train == 1).sum()
-        scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+        if cfg.scale_pos_weight == "auto":
+            scale_pos_weight = neg_count / pos_count if pos_count > 0 else 1.0
+        else:
+            scale_pos_weight = float(cfg.scale_pos_weight)
 
         # Validation split for early stopping
         X_tr, X_val, y_tr, y_val = train_test_split(
