@@ -1,0 +1,73 @@
+# Churn Prediction Platform - Default Configuration
+
+data:
+  n_users: 10000
+  n_months: 12
+  churn_rate: 0.18
+  seed: 42
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+
+features:
+  numerical:
+    - login_frequency
+    - avg_session_duration_min
+    - feature_usage_score
+    - support_tickets_total
+    - days_since_last_login
+    - monthly_active_days
+    - pages_per_session
+  categorical:
+    - plan_tier
+    - billing_cycle
+    - signup_channel
+  target: churned
+
+training:
+  test_size: 0.2
+  val_size: 0.15
+  seed: 42
+  cv_folds: 5
+
+xgboost:
+  n_estimators: 300
+  max_depth: 6
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  min_child_weight: 3
+  reg_alpha: 0.1
+  reg_lambda: 1.0
+  scale_pos_weight: auto  # computed from class imbalance
+  eval_metric: "aucpr"
+  early_stopping_rounds: 30
+
+neural_net:
+  hidden_dims: [128, 64, 32]
+  dropout: 0.3
+  learning_rate: 0.001
+  batch_size: 256
+  epochs: 50
+  patience: 10
+  weight_decay: 0.0001
+
+logistic:
+  C: 1.0
+  max_iter: 1000
+  class_weight: "balanced"
+
+serving:
+  host: "0.0.0.0"
+  port: 8000
+  model_name: "xgboost"
+  model_version: "latest"
+
+monitoring:
+  drift_threshold: 0.05
+  performance_window_days: 30
+  alert_threshold_auc: 0.75
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+  file: "logs/churn.log"
