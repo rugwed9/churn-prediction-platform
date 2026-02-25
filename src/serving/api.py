@@ -138,10 +138,20 @@ class ModelServer:
         if self.model is None:
             raise RuntimeError("Model not loaded")
 
+        start = time.perf_counter()
         df = pd.DataFrame([features.model_dump()])
         X = self.feature_store.transform(df)
         prob = float(self.model.predict_proba(X)[0, 1])
+        latency_ms = (time.perf_counter() - start) * 1000
         self._prediction_count += 1
+
+        logger.info(
+            "Prediction #%d for user=%s prob=%.4f latency=%.1fms",
+            self._prediction_count,
+            features.user_id,
+            prob,
+            latency_ms,
+        )
 
         return PredictionResponse(
             user_id=features.user_id,
