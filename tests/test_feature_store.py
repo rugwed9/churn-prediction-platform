@@ -1,13 +1,11 @@
 """Tests for the feature store."""
 
 import numpy as np
-import pandas as pd
 import pytest
 
-from src.config import FeaturesConfig
+from src.config import DataConfig, FeaturesConfig
 from src.data.generator import ChurnDataGenerator
-from src.config import DataConfig
-from src.features.store import FeatureStore, FeatureView, FeatureDefinition
+from src.features.store import FeatureDefinition, FeatureStore, FeatureView
 
 
 @pytest.fixture

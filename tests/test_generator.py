@@ -1,7 +1,7 @@
 """Tests for the data generator."""
 
-import pytest
 import pandas as pd
+import pytest
 
 from src.config import DataConfig
 from src.data.generator import ChurnDataGenerator
@@ -38,19 +38,30 @@ class TestChurnDataGenerator:
     def test_has_required_columns(self, generator):
         df = generator.generate()
         required = [
-            "user_id", "login_frequency", "avg_session_duration_min",
-            "feature_usage_score", "support_tickets_total",
-            "days_since_last_login", "monthly_active_days",
-            "pages_per_session", "plan_tier", "billing_cycle",
-            "signup_channel", "churned",
+            "user_id",
+            "login_frequency",
+            "avg_session_duration_min",
+            "feature_usage_score",
+            "support_tickets_total",
+            "days_since_last_login",
+            "monthly_active_days",
+            "pages_per_session",
+            "plan_tier",
+            "billing_cycle",
+            "signup_channel",
+            "churned",
         ]
         for col in required:
             assert col in df.columns, f"Missing column: {col}"
 
     def test_no_negative_values(self, generator):
         df = generator.generate()
-        numerical = ["login_frequency", "avg_session_duration_min",
-                      "feature_usage_score", "monthly_active_days"]
+        numerical = [
+            "login_frequency",
+            "avg_session_duration_min",
+            "feature_usage_score",
+            "monthly_active_days",
+        ]
         for col in numerical:
             assert (df[col] >= 0).all(), f"Negative values in {col}"
 
@@ -75,6 +86,7 @@ class TestChurnDataGenerator:
         generator.config.raw_dir = str(tmp_path)
 
         from unittest.mock import patch
+
         with patch("src.data.generator.PROJECT_ROOT", tmp_path):
             path = generator.save(df)
             assert path.exists()

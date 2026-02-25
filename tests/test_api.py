@@ -71,20 +71,22 @@ class TestBatchEndpoint:
         server.model = None
 
         payload = {
-            "users": [{
-                "user_id": "test_001",
-                "login_frequency": 15.0,
-                "avg_session_duration_min": 20.0,
-                "feature_usage_score": 65.0,
-                "support_tickets_total": 2,
-                "days_since_last_login": 3.0,
-                "monthly_active_days": 20.0,
-                "pages_per_session": 8.0,
-                "plan_tier": "professional",
-                "billing_cycle": "monthly",
-                "signup_channel": "organic",
-                "mrr": 99.0,
-            }]
+            "users": [
+                {
+                    "user_id": "test_001",
+                    "login_frequency": 15.0,
+                    "avg_session_duration_min": 20.0,
+                    "feature_usage_score": 65.0,
+                    "support_tickets_total": 2,
+                    "days_since_last_login": 3.0,
+                    "monthly_active_days": 20.0,
+                    "pages_per_session": 8.0,
+                    "plan_tier": "professional",
+                    "billing_cycle": "monthly",
+                    "signup_channel": "organic",
+                    "mrr": 99.0,
+                }
+            ]
         }
         response = client.post("/predict/batch", json=payload)
         assert response.status_code == 503

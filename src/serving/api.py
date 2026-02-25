@@ -7,11 +7,9 @@ model versioning, feature transformation, and prediction logging.
 import logging
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 import joblib
-import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -29,6 +27,7 @@ app = FastAPI(
 
 
 # --- Request / Response models ---
+
 
 class UserFeatures(BaseModel):
     """Input features for a single user prediction."""
@@ -87,6 +86,7 @@ class HealthResponse(BaseModel):
 
 
 # --- Application state ---
+
 
 class ModelServer:
     """Manages model loading and prediction serving."""
@@ -166,6 +166,7 @@ server = ModelServer()
 
 
 # --- Endpoints ---
+
 
 @app.on_event("startup")
 async def startup():

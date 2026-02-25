@@ -20,3 +20,6 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+# N803/N806: Allow uppercase X, y - standard ML convention for feature matrices and targets
+# N811/N812: Allow `import functions as F` - standard PySpark convention
+ignore = ["N803", "N806", "N811", "N812"]

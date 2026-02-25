@@ -1,6 +1,6 @@
 """Tests for configuration."""
 
-from src.config import Settings, load_config, DataConfig, XGBoostConfig
+from src.config import DataConfig, Settings, XGBoostConfig, load_config
 
 
 class TestConfig:

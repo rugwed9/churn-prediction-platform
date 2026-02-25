@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from src.config import MonitoringConfig, PROJECT_ROOT
+from src.config import PROJECT_ROOT, MonitoringConfig
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,7 @@ def _try_import_evidently():
     try:
         from evidently.metric_preset import DataDriftPreset, TargetDriftPreset
         from evidently.report import Report
+
         return Report, DataDriftPreset, TargetDriftPreset
     except ImportError:
         logger.warning("Evidently not installed. Install with: pip install evidently")
@@ -45,8 +46,7 @@ class DriftDetector:
     def set_reference(self, df: pd.DataFrame) -> None:
         """Set the reference (training) data distribution."""
         self.reference_data = df.copy()
-        logger.info("Drift detector reference set: %d rows, %d columns",
-                     len(df), len(df.columns))
+        logger.info("Drift detector reference set: %d rows, %d columns", len(df), len(df.columns))
 
     def detect_drift(
         self,
@@ -145,7 +145,8 @@ class DriftDetector:
         if results["drift_detected"]:
             logger.warning(
                 "Drift detected in %d features: %s",
-                len(results["drifted_features"]), results["drifted_features"],
+                len(results["drifted_features"]),
+                results["drifted_features"],
             )
         else:
             logger.info("No significant drift detected")

@@ -14,7 +14,7 @@ Design:
 import hashlib
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-from src.config import FeaturesConfig, PROJECT_ROOT
+from src.config import PROJECT_ROOT, FeaturesConfig
 
 logger = logging.getLogger(__name__)
 
@@ -83,34 +83,43 @@ class FeatureStore:
     def register_feature_view(self, view: FeatureView) -> None:
         """Register a feature view definition."""
         self.feature_views[view.name] = view
-        logger.info("Registered feature view: %s (v%s, %d features)",
-                     view.name, view.version, len(view.features))
+        logger.info(
+            "Registered feature view: %s (v%s, %d features)",
+            view.name,
+            view.version,
+            len(view.features),
+        )
 
     def get_default_feature_view(self) -> FeatureView:
         """Create the default churn prediction feature view."""
         numerical_features = [
-            FeatureDefinition(name=f, dtype="numerical")
-            for f in self.config.numerical
+            FeatureDefinition(name=f, dtype="numerical") for f in self.config.numerical
         ]
         # Add engineered features
-        numerical_features.extend([
-            FeatureDefinition(name="login_frequency_trend", dtype="numerical",
-                              description="Rate of change in login frequency"),
-            FeatureDefinition(name="session_duration_std", dtype="numerical",
-                              description="Variability in session duration"),
-            FeatureDefinition(name="months_active", dtype="numerical"),
-            FeatureDefinition(name="support_tickets_recent", dtype="numerical"),
-            FeatureDefinition(name="mrr", dtype="numerical",
-                              description="Monthly recurring revenue"),
-        ])
+        numerical_features.extend(
+            [
+                FeatureDefinition(
+                    name="login_frequency_trend",
+                    dtype="numerical",
+                    description="Rate of change in login frequency",
+                ),
+                FeatureDefinition(
+                    name="session_duration_std",
+                    dtype="numerical",
+                    description="Variability in session duration",
+                ),
+                FeatureDefinition(name="months_active", dtype="numerical"),
+                FeatureDefinition(name="support_tickets_recent", dtype="numerical"),
+                FeatureDefinition(
+                    name="mrr", dtype="numerical", description="Monthly recurring revenue"
+                ),
+            ]
+        )
 
         categorical_features = [
-            FeatureDefinition(name=f, dtype="categorical")
-            for f in self.config.categorical
+            FeatureDefinition(name=f, dtype="categorical") for f in self.config.categorical
         ]
-        categorical_features.append(
-            FeatureDefinition(name="company_size", dtype="categorical")
-        )
+        categorical_features.append(FeatureDefinition(name="company_size", dtype="categorical"))
 
         return FeatureView(
             name="churn_features_v1",
@@ -197,22 +206,26 @@ class FeatureStore:
         self._feature_names = feature_names
 
         # Record materialization
-        schema_hash = hashlib.md5(
-            json.dumps(feature_names, sort_keys=True).encode()
-        ).hexdigest()[:8]
+        schema_hash = hashlib.md5(json.dumps(feature_names, sort_keys=True).encode()).hexdigest()[
+            :8
+        ]
 
-        self._registry.append(MaterializedFeatures(
-            version=view.version,
-            created_at=datetime.now(),
-            n_rows=len(df),
-            n_features=len(feature_names),
-            feature_names=feature_names,
-            schema_hash=schema_hash,
-        ))
+        self._registry.append(
+            MaterializedFeatures(
+                version=view.version,
+                created_at=datetime.now(),
+                n_rows=len(df),
+                n_features=len(feature_names),
+                feature_names=feature_names,
+                schema_hash=schema_hash,
+            )
+        )
 
         logger.info(
             "Feature store fitted: %d samples, %d features (schema: %s)",
-            X.shape[0], X.shape[1], schema_hash,
+            X.shape[0],
+            X.shape[1],
+            schema_hash,
         )
         return X, y, feature_names
 
@@ -245,7 +258,8 @@ class FeatureStore:
             if unseen_mask.any():
                 logger.warning(
                     "Unseen categories in '%s': %s (mapping to mode)",
-                    col, values[unseen_mask].unique()[:5],
+                    col,
+                    values[unseen_mask].unique()[:5],
                 )
                 values[unseen_mask] = encoder.classes_[0]
             encoded = encoder.transform(values)

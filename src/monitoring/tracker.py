@@ -7,7 +7,6 @@ monitoring dashboard.
 
 import json
 import logging
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -37,15 +36,17 @@ class PerformanceTracker:
         model_version: str = "",
     ) -> None:
         """Log a single prediction for tracking."""
-        self.prediction_log.append({
-            "timestamp": datetime.now().isoformat(),
-            "user_id": user_id,
-            "probability": probability,
-            "prediction": prediction,
-            "actual": actual,
-            "model_name": model_name,
-            "model_version": model_version,
-        })
+        self.prediction_log.append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "user_id": user_id,
+                "probability": probability,
+                "prediction": prediction,
+                "actual": actual,
+                "model_name": model_name,
+                "model_version": model_version,
+            }
+        )
 
     def compute_business_metrics(
         self,

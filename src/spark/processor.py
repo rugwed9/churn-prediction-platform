@@ -10,7 +10,6 @@ Usage:
 """
 
 import logging
-from typing import Any
 
 from pyspark.sql import DataFrame, SparkSession, Window
 from pyspark.sql import functions as F
@@ -29,8 +28,7 @@ logger = logging.getLogger(__name__)
 def get_spark_session(app_name: str = "ChurnPrediction") -> SparkSession:
     """Create or get a SparkSession."""
     return (
-        SparkSession.builder
-        .appName(app_name)
+        SparkSession.builder.appName(app_name)
         .config("spark.sql.shuffle.partitions", "200")
         .config("spark.sql.adaptive.enabled", "true")
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
@@ -39,15 +37,17 @@ def get_spark_session(app_name: str = "ChurnPrediction") -> SparkSession:
 
 
 # Schema for raw event data
-EVENT_SCHEMA = StructType([
-    StructField("user_id", StringType(), False),
-    StructField("event_type", StringType(), False),
-    StructField("event_timestamp", TimestampType(), False),
-    StructField("session_id", StringType(), True),
-    StructField("duration_seconds", FloatType(), True),
-    StructField("page_views", IntegerType(), True),
-    StructField("feature_name", StringType(), True),
-])
+EVENT_SCHEMA = StructType(
+    [
+        StructField("user_id", StringType(), False),
+        StructField("event_type", StringType(), False),
+        StructField("event_timestamp", TimestampType(), False),
+        StructField("session_id", StringType(), True),
+        StructField("duration_seconds", FloatType(), True),
+        StructField("page_views", IntegerType(), True),
+        StructField("feature_name", StringType(), True),
+    ]
+)
 
 
 class SparkFeatureProcessor:
@@ -72,7 +72,6 @@ class SparkFeatureProcessor:
         logins = events.filter(F.col("event_type") == "login")
 
         # Window: per user, ordered by time
-        user_window = Window.partitionBy("user_id")
         recent_window = (
             Window.partitionBy("user_id")
             .orderBy(F.col("event_timestamp").cast("long"))
@@ -85,15 +84,14 @@ class SparkFeatureProcessor:
         )
 
         features = (
-            logins
-            .withColumn("login_count_recent", F.count("*").over(recent_window))
+            logins.withColumn("login_count_recent", F.count("*").over(recent_window))
             .withColumn("login_count_early", F.count("*").over(early_window))
             .groupBy("user_id")
             .agg(
                 F.mean("login_count_recent").alias("login_frequency"),
-                F.datediff(
-                    F.current_timestamp(), F.max("event_timestamp")
-                ).alias("days_since_last_login"),
+                F.datediff(F.current_timestamp(), F.max("event_timestamp")).alias(
+                    "days_since_last_login"
+                ),
                 (
                     (F.mean("login_count_recent") - F.mean("login_count_early"))
                     / F.greatest(F.mean("login_count_early"), F.lit(1))
@@ -113,27 +111,19 @@ class SparkFeatureProcessor:
         """
         sessions = events.filter(F.col("session_id").isNotNull())
 
-        session_stats = (
-            sessions
-            .groupBy("user_id", "session_id")
-            .agg(
-                F.sum("duration_seconds").alias("session_duration_sec"),
-                F.sum("page_views").alias("session_pages"),
-                F.min("event_timestamp").alias("session_start"),
-            )
+        session_stats = sessions.groupBy("user_id", "session_id").agg(
+            F.sum("duration_seconds").alias("session_duration_sec"),
+            F.sum("page_views").alias("session_pages"),
+            F.min("event_timestamp").alias("session_start"),
         )
 
-        features = (
-            session_stats
-            .groupBy("user_id")
-            .agg(
-                (F.mean("session_duration_sec") / 60).alias("avg_session_duration_min"),
-                (F.stddev("session_duration_sec") / 60).alias("session_duration_std"),
-                F.mean("session_pages").alias("pages_per_session"),
-                F.countDistinct(
-                    F.date_format("session_start", "yyyy-MM-dd")
-                ).alias("monthly_active_days"),
-            )
+        features = session_stats.groupBy("user_id").agg(
+            (F.mean("session_duration_sec") / 60).alias("avg_session_duration_min"),
+            (F.stddev("session_duration_sec") / 60).alias("session_duration_std"),
+            F.mean("session_pages").alias("pages_per_session"),
+            F.countDistinct(F.date_format("session_start", "yyyy-MM-dd")).alias(
+                "monthly_active_days"
+            ),
         )
         return features
 
@@ -146,18 +136,14 @@ class SparkFeatureProcessor:
         """
         tickets = events.filter(F.col("event_type") == "support_ticket")
 
-        features = (
-            tickets
-            .groupBy("user_id")
-            .agg(
-                F.count("*").alias("support_tickets_total"),
-                F.sum(
-                    F.when(
-                        F.datediff(F.current_timestamp(), F.col("event_timestamp")) <= 30,
-                        1,
-                    ).otherwise(0)
-                ).alias("support_tickets_recent"),
-            )
+        features = tickets.groupBy("user_id").agg(
+            F.count("*").alias("support_tickets_total"),
+            F.sum(
+                F.when(
+                    F.datediff(F.current_timestamp(), F.col("event_timestamp")) <= 30,
+                    1,
+                ).otherwise(0)
+            ).alias("support_tickets_recent"),
         )
         return features
 
@@ -173,12 +159,9 @@ class SparkFeatureProcessor:
         total_features = feature_events.select("feature_name").distinct().count()
         total_features = max(total_features, 1)
 
-        features = (
-            feature_events
-            .groupBy("user_id")
-            .agg(
-                (F.countDistinct("feature_name") / F.lit(total_features) * 100)
-                .alias("feature_usage_score")
+        features = feature_events.groupBy("user_id").agg(
+            (F.countDistinct("feature_name") / F.lit(total_features) * 100).alias(
+                "feature_usage_score"
             )
         )
         return features
@@ -208,8 +191,7 @@ class SparkFeatureProcessor:
 
         # Join all feature groups
         feature_table = (
-            user_metadata
-            .join(login_features, "user_id", "left")
+            user_metadata.join(login_features, "user_id", "left")
             .join(session_features, "user_id", "left")
             .join(support_features, "user_id", "left")
             .join(usage_features, "user_id", "left")
@@ -232,8 +214,10 @@ class SparkFeatureProcessor:
 
         Ensures no feature was computed using data from after the label event.
         """
-        if (label_timestamp_col not in feature_table.columns or
-                feature_timestamp_col not in feature_table.columns):
+        if (
+            label_timestamp_col not in feature_table.columns
+            or feature_timestamp_col not in feature_table.columns
+        ):
             logger.info("Timestamp columns not found, skipping PIT validation")
             return True
 

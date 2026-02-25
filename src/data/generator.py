@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from src.config import DataConfig, PROJECT_ROOT
+from src.config import PROJECT_ROOT, DataConfig
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,9 @@ class ChurnDataGenerator:
         """
         logger.info(
             "Generating data: %d users, %d months, %.0f%% churn rate",
-            self.config.n_users, self.config.n_months, self.config.churn_rate * 100,
+            self.config.n_users,
+            self.config.n_months,
+            self.config.churn_rate * 100,
         )
 
         users = self._generate_user_profiles()
@@ -59,7 +61,9 @@ class ChurnDataGenerator:
 
         logger.info(
             "Generated dataset: %d rows, %d features, %.1f%% churn",
-            len(final), len(final.columns), final["churned"].mean() * 100,
+            len(final),
+            len(final.columns),
+            final["churned"].mean() * 100,
         )
         return final
 
@@ -83,7 +87,7 @@ class ChurnDataGenerator:
         plan_tier = []
         for eng in engagement:
             adjusted = plan_probs.copy()
-            adjusted[2:] *= (1 + eng)  # Boost pro/enterprise for engaged users
+            adjusted[2:] *= 1 + eng  # Boost pro/enterprise for engaged users
             adjusted /= adjusted.sum()
             plan_tier.append(self.rng.choice(self.PLAN_TIERS, p=adjusted))
 
@@ -96,29 +100,29 @@ class ChurnDataGenerator:
         churn_month = np.zeros(n, dtype=int)
         churned_mask = churned == 1
         n_churned = churned_mask.sum()
-        churn_month[churned_mask] = self.rng.integers(
-            4, self.config.n_months + 1, size=n_churned
-        )
+        churn_month[churned_mask] = self.rng.integers(4, self.config.n_months + 1, size=n_churned)
 
-        return pd.DataFrame({
-            "user_id": [f"user_{i:05d}" for i in range(n)],
-            "engagement_latent": engagement,
-            "churned": churned,
-            "churn_month": churn_month,
-            "plan_tier": plan_tier,
-            "billing_cycle": self.rng.choice(
-                self.BILLING_CYCLES, size=n, p=self.BILLING_WEIGHTS
-            ),
-            "signup_channel": self.rng.choice(
-                self.SIGNUP_CHANNELS, size=n, p=self.SIGNUP_WEIGHTS
-            ),
-            "signup_date": signup_dates,
-            "company_size": self.rng.choice(
-                ["1-10", "11-50", "51-200", "201-1000", "1000+"],
-                size=n,
-                p=[0.30, 0.30, 0.20, 0.15, 0.05],
-            ),
-        })
+        return pd.DataFrame(
+            {
+                "user_id": [f"user_{i:05d}" for i in range(n)],
+                "engagement_latent": engagement,
+                "churned": churned,
+                "churn_month": churn_month,
+                "plan_tier": plan_tier,
+                "billing_cycle": self.rng.choice(
+                    self.BILLING_CYCLES, size=n, p=self.BILLING_WEIGHTS
+                ),
+                "signup_channel": self.rng.choice(
+                    self.SIGNUP_CHANNELS, size=n, p=self.SIGNUP_WEIGHTS
+                ),
+                "signup_date": signup_dates,
+                "company_size": self.rng.choice(
+                    ["1-10", "11-50", "51-200", "201-1000", "1000+"],
+                    size=n,
+                    p=[0.30, 0.30, 0.20, 0.15, 0.05],
+                ),
+            }
+        )
 
     def _generate_monthly_behavior(self, users: pd.DataFrame) -> pd.DataFrame:
         """Generate monthly behavioral features for each user.
@@ -151,35 +155,31 @@ class ChurnDataGenerator:
                 # Behavioral features driven by effective engagement
                 login_freq = max(0, self.rng.poisson(effective_eng * 25))
                 session_dur = max(0.5, self.rng.gamma(2, effective_eng * 15))
-                feature_usage = np.clip(
-                    effective_eng * 100 + self.rng.normal(0, 10), 0, 100
-                )
+                feature_usage = np.clip(effective_eng * 100 + self.rng.normal(0, 10), 0, 100)
                 support_tickets = self.rng.poisson(max(0.1, (1 - effective_eng) * 3))
                 active_days = min(30, max(0, self.rng.binomial(30, effective_eng)))
                 pages_per_session = max(1, self.rng.poisson(effective_eng * 8))
 
                 # Days since last login (inverse of engagement)
-                days_since_login = max(0, self.rng.exponential(
-                    max(0.5, (1 - effective_eng) * 15)
-                ))
+                days_since_login = max(0, self.rng.exponential(max(0.5, (1 - effective_eng) * 15)))
 
-                records.append({
-                    "user_id": user["user_id"],
-                    "month": month,
-                    "login_frequency": login_freq,
-                    "avg_session_duration_min": round(session_dur, 1),
-                    "feature_usage_score": round(feature_usage, 1),
-                    "support_tickets": support_tickets,
-                    "days_since_last_login": round(days_since_login, 1),
-                    "monthly_active_days": active_days,
-                    "pages_per_session": pages_per_session,
-                })
+                records.append(
+                    {
+                        "user_id": user["user_id"],
+                        "month": month,
+                        "login_frequency": login_freq,
+                        "avg_session_duration_min": round(session_dur, 1),
+                        "feature_usage_score": round(feature_usage, 1),
+                        "support_tickets": support_tickets,
+                        "days_since_last_login": round(days_since_login, 1),
+                        "monthly_active_days": active_days,
+                        "pages_per_session": pages_per_session,
+                    }
+                )
 
         return pd.DataFrame(records)
 
-    def _aggregate_features(
-        self, users: pd.DataFrame, monthly: pd.DataFrame
-    ) -> pd.DataFrame:
+    def _aggregate_features(self, users: pd.DataFrame, monthly: pd.DataFrame) -> pd.DataFrame:
         """Aggregate monthly data into user-level features.
 
         Point-in-time correct: for churned users, only uses data up to

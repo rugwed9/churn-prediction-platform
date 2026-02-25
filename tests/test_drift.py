@@ -16,11 +16,13 @@ def detector():
 @pytest.fixture
 def reference_data():
     np.random.seed(42)
-    return pd.DataFrame({
-        "feature_a": np.random.normal(0, 1, 500),
-        "feature_b": np.random.normal(5, 2, 500),
-        "category": np.random.choice(["A", "B", "C"], 500),
-    })
+    return pd.DataFrame(
+        {
+            "feature_a": np.random.normal(0, 1, 500),
+            "feature_b": np.random.normal(5, 2, 500),
+            "category": np.random.choice(["A", "B", "C"], 500),
+        }
+    )
 
 
 class TestDriftDetector:
@@ -29,11 +31,13 @@ class TestDriftDetector:
 
         # Current data from same distribution
         np.random.seed(99)
-        current = pd.DataFrame({
-            "feature_a": np.random.normal(0, 1, 500),
-            "feature_b": np.random.normal(5, 2, 500),
-            "category": np.random.choice(["A", "B", "C"], 500),
-        })
+        current = pd.DataFrame(
+            {
+                "feature_a": np.random.normal(0, 1, 500),
+                "feature_b": np.random.normal(5, 2, 500),
+                "category": np.random.choice(["A", "B", "C"], 500),
+            }
+        )
 
         results = detector.detect_drift(
             current,
@@ -49,11 +53,13 @@ class TestDriftDetector:
         detector.set_reference(reference_data)
 
         # Significantly shifted distribution
-        current = pd.DataFrame({
-            "feature_a": np.random.normal(5, 1, 500),  # Mean shifted from 0 to 5
-            "feature_b": np.random.normal(5, 2, 500),
-            "category": np.random.choice(["A", "B", "C"], 500),
-        })
+        current = pd.DataFrame(
+            {
+                "feature_a": np.random.normal(5, 1, 500),  # Mean shifted from 0 to 5
+                "feature_b": np.random.normal(5, 2, 500),
+                "category": np.random.choice(["A", "B", "C"], 500),
+            }
+        )
 
         results = detector.detect_drift(
             current,
@@ -87,6 +93,7 @@ class TestDriftDetector:
         results = detector.detect_drift(reference_data, numerical_cols=["feature_a"])
 
         from unittest.mock import patch
+
         with patch("src.monitoring.drift.PROJECT_ROOT", tmp_path):
             path = detector.save_results(results)
             assert path.exists()

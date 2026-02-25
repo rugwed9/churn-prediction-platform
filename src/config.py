@@ -1,13 +1,11 @@
 """Centralized configuration management."""
 
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
-
 
 PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 
@@ -22,14 +20,24 @@ class DataConfig(BaseModel):
 
 
 class FeaturesConfig(BaseModel):
-    numerical: list[str] = Field(default_factory=lambda: [
-        "login_frequency", "avg_session_duration_min", "feature_usage_score",
-        "support_tickets_total", "days_since_last_login",
-        "monthly_active_days", "pages_per_session",
-    ])
-    categorical: list[str] = Field(default_factory=lambda: [
-        "plan_tier", "billing_cycle", "signup_channel",
-    ])
+    numerical: list[str] = Field(
+        default_factory=lambda: [
+            "login_frequency",
+            "avg_session_duration_min",
+            "feature_usage_score",
+            "support_tickets_total",
+            "days_since_last_login",
+            "monthly_active_days",
+            "pages_per_session",
+        ]
+    )
+    categorical: list[str] = Field(
+        default_factory=lambda: [
+            "plan_tier",
+            "billing_cycle",
+            "signup_channel",
+        ]
+    )
     target: str = "churned"
 
 

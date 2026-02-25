@@ -1,12 +1,11 @@
 """Tests for the model trainer."""
 
-import numpy as np
 import pytest
 
 from src.config import DataConfig, FeaturesConfig, load_config
 from src.data.generator import ChurnDataGenerator
 from src.features.store import FeatureStore
-from src.models.trainer import ModelTrainer, ModelMetrics, ChurnTabNet
+from src.models.trainer import ChurnTabNet, ModelMetrics, ModelTrainer
 
 
 @pytest.fixture
@@ -85,7 +84,7 @@ class TestModelTrainer:
 
         trainer = ModelTrainer(config)
         trainer.train_all(X, y, names)
-        base = trainer.save_models(str(tmp_path))
+        trainer.save_models(str(tmp_path))
 
         assert (tmp_path / "xgboost" / "1.0.0" / "model.joblib").exists()
         assert (tmp_path / "xgboost" / "1.0.0" / "metrics.json").exists()
@@ -96,8 +95,13 @@ class TestModelTrainer:
 class TestModelMetrics:
     def test_to_dict(self):
         m = ModelMetrics(
-            model_name="test", auc_roc=0.85, auc_pr=0.75,
-            f1=0.7, precision=0.8, recall=0.65, accuracy=0.82,
+            model_name="test",
+            auc_roc=0.85,
+            auc_pr=0.75,
+            f1=0.7,
+            precision=0.8,
+            recall=0.65,
+            accuracy=0.82,
         )
         d = m.to_dict()
         assert d["model_name"] == "test"
@@ -107,6 +111,7 @@ class TestModelMetrics:
 class TestChurnTabNet:
     def test_forward_pass(self):
         import torch
+
         model = ChurnTabNet(input_dim=10, hidden_dims=[32, 16], dropout=0.1)
         x = torch.randn(5, 10)
         out = model(x)
@@ -114,6 +119,7 @@ class TestChurnTabNet:
 
     def test_output_range_after_sigmoid(self):
         import torch
+
         model = ChurnTabNet(input_dim=10, hidden_dims=[32], dropout=0.0)
         model.eval()
         x = torch.randn(10, 10)

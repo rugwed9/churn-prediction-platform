@@ -6,13 +6,10 @@ trust and model debugging.
 """
 
 import logging
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import shap
-
-from src.config import PROJECT_ROOT
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +38,7 @@ class ChurnExplainer:
                 background,
             )
 
-    def compute_global_importance(
-        self, X: np.ndarray, max_samples: int = 500
-    ) -> dict[str, float]:
+    def compute_global_importance(self, X: np.ndarray, max_samples: int = 500) -> dict[str, float]:
         """Compute global feature importance via mean absolute SHAP values.
 
         Args:
@@ -70,8 +65,7 @@ class ChurnExplainer:
         # Sort by importance
         importance = dict(sorted(importance.items(), key=lambda x: x[1], reverse=True))
 
-        logger.info("Top 5 features: %s",
-                     {k: f"{v:.4f}" for k, v in list(importance.items())[:5]})
+        logger.info("Top 5 features: %s", {k: f"{v:.4f}" for k, v in list(importance.items())[:5]})
         return importance
 
     def explain_prediction(

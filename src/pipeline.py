@@ -7,12 +7,8 @@ execution and individual stage entry points.
 
 import logging
 import time
-from pathlib import Path
 
-import numpy as np
-import pandas as pd
-
-from src.config import Settings, load_config, setup_logging, PROJECT_ROOT
+from src.config import Settings, load_config, setup_logging
 from src.data.generator import ChurnDataGenerator
 from src.features.store import FeatureStore
 from src.models.trainer import ModelTrainer
@@ -52,7 +48,9 @@ class ChurnPipeline:
 
         logger.info(
             "Dataset: %d samples, %d features, %.1f%% positive",
-            X.shape[0], X.shape[1], y.mean() * 100,
+            X.shape[0],
+            X.shape[1],
+            y.mean() * 100,
         )
 
         # Stage 3: Model training
@@ -63,6 +61,7 @@ class ChurnPipeline:
         # Stage 4: Feature importance (SHAP)
         logger.info("Stage 4: Feature importance")
         from src.models.explainer import ChurnExplainer
+
         xgb_model = models["xgboost"]
         explainer = ChurnExplainer(xgb_model.model, feature_names)
         importance = explainer.compute_global_importance(X)
@@ -75,9 +74,7 @@ class ChurnPipeline:
                 "n_features": X.shape[1],
                 "churn_rate": float(y.mean()),
             },
-            "models": {
-                name: tm.metrics.to_dict() for name, tm in models.items()
-            },
+            "models": {name: tm.metrics.to_dict() for name, tm in models.items()},
             "feature_importance": dict(list(importance.items())[:10]),
             "pipeline_duration_seconds": round(elapsed, 1),
         }

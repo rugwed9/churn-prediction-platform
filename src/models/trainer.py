@@ -16,14 +16,12 @@ from typing import Any
 
 import joblib
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     average_precision_score,
-    classification_report,
     f1_score,
     precision_score,
     recall_score,
@@ -33,12 +31,8 @@ from sklearn.model_selection import StratifiedKFold, train_test_split
 from xgboost import XGBClassifier
 
 from src.config import (
-    LogisticConfig,
-    NeuralNetConfig,
-    Settings,
-    TrainingConfig,
-    XGBoostConfig,
     PROJECT_ROOT,
+    Settings,
 )
 
 logger = logging.getLogger(__name__)
@@ -62,8 +56,7 @@ class ModelMetrics:
     n_test: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        return {k: round(v, 4) if isinstance(v, float) else v
-                for k, v in self.__dict__.items()}
+        return {k: round(v, 4) if isinstance(v, float) else v for k, v in self.__dict__.items()}
 
 
 @dataclass
@@ -91,12 +84,14 @@ class ChurnTabNet(nn.Module):
         prev_dim = input_dim
 
         for dim in hidden_dims:
-            layers.extend([
-                nn.Linear(prev_dim, dim),
-                nn.BatchNorm1d(dim),
-                nn.ReLU(),
-                nn.Dropout(dropout),
-            ])
+            layers.extend(
+                [
+                    nn.Linear(prev_dim, dim),
+                    nn.BatchNorm1d(dim),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                ]
+            )
             prev_dim = dim
 
         layers.append(nn.Linear(prev_dim, 1))
@@ -132,7 +127,8 @@ class ModelTrainer:
         """
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y,
+            X,
+            y,
             test_size=self.training_config.test_size,
             random_state=self.training_config.seed,
             stratify=y,
@@ -140,7 +136,9 @@ class ModelTrainer:
 
         logger.info(
             "Training split: %d train, %d test (%.1f%% churn in train)",
-            len(X_train), len(X_test), y_train.mean() * 100,
+            len(X_train),
+            len(X_test),
+            y_train.mean() * 100,
         )
 
         # Train each model
@@ -159,13 +157,12 @@ class ModelTrainer:
 
         return self.models
 
-    def _train_xgboost(
-        self, X_train, y_train, X_test, y_test, feature_names
-    ) -> TrainedModel:
+    def _train_xgboost(self, X_train, y_train, X_test, y_test, feature_names) -> TrainedModel:
         """Train XGBoost with early stopping and cross-validation."""
         cfg = self.config.xgboost
-        logger.info("Training XGBoost (n_estimators=%d, max_depth=%d)",
-                     cfg.n_estimators, cfg.max_depth)
+        logger.info(
+            "Training XGBoost (n_estimators=%d, max_depth=%d)", cfg.n_estimators, cfg.max_depth
+        )
 
         # Compute scale_pos_weight for class imbalance
         neg_count = (y_train == 0).sum()
@@ -174,7 +171,8 @@ class ModelTrainer:
 
         # Validation split for early stopping
         X_tr, X_val, y_tr, y_val = train_test_split(
-            X_train, y_train,
+            X_train,
+            y_train,
             test_size=self.training_config.val_size,
             random_state=self.training_config.seed,
             stratify=y_train,
@@ -198,7 +196,8 @@ class ModelTrainer:
 
         start = time.perf_counter()
         model.fit(
-            X_tr, y_tr,
+            X_tr,
+            y_tr,
             eval_set=[(X_val, y_val)],
             verbose=False,
         )
@@ -207,31 +206,34 @@ class ModelTrainer:
         # Cross-validation AUC
         cv_auc = self._cross_validate_auc(model, X_train, y_train)
 
-        metrics = self._compute_metrics(
-            "xgboost", model, X_test, y_test, cv_auc, train_time
-        )
+        metrics = self._compute_metrics("xgboost", model, X_test, y_test, cv_auc, train_time)
 
-        logger.info("XGBoost trained in %.1fs (AUC: %.4f, best_iter: %d)",
-                     train_time, metrics.auc_roc, model.best_iteration)
+        logger.info(
+            "XGBoost trained in %.1fs (AUC: %.4f, best_iter: %d)",
+            train_time,
+            metrics.auc_roc,
+            model.best_iteration,
+        )
 
         return TrainedModel(
-            name="xgboost", model=model, metrics=metrics,
-            feature_names=feature_names, version="1.0.0",
+            name="xgboost",
+            model=model,
+            metrics=metrics,
+            feature_names=feature_names,
+            version="1.0.0",
         )
 
-    def _train_neural_net(
-        self, X_train, y_train, X_test, y_test, feature_names
-    ) -> TrainedModel:
+    def _train_neural_net(self, X_train, y_train, X_test, y_test, feature_names) -> TrainedModel:
         """Train PyTorch tabular neural network with early stopping."""
         cfg = self.config.neural_net
-        logger.info("Training Neural Net (layers=%s, dropout=%.2f)",
-                     cfg.hidden_dims, cfg.dropout)
+        logger.info("Training Neural Net (layers=%s, dropout=%.2f)", cfg.hidden_dims, cfg.dropout)
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Validation split
         X_tr, X_val, y_tr, y_val = train_test_split(
-            X_train, y_train,
+            X_train,
+            y_train,
             test_size=self.training_config.val_size,
             random_state=self.training_config.seed,
             stratify=y_train,
@@ -314,13 +316,14 @@ class ModelTrainer:
         logger.info("Neural Net trained in %.1fs (AUC: %.4f)", train_time, metrics.auc_roc)
 
         return TrainedModel(
-            name="neural_net", model=wrapper, metrics=metrics,
-            feature_names=feature_names, version="1.0.0",
+            name="neural_net",
+            model=wrapper,
+            metrics=metrics,
+            feature_names=feature_names,
+            version="1.0.0",
         )
 
-    def _train_logistic(
-        self, X_train, y_train, X_test, y_test, feature_names
-    ) -> TrainedModel:
+    def _train_logistic(self, X_train, y_train, X_test, y_test, feature_names) -> TrainedModel:
         """Train logistic regression baseline."""
         cfg = self.config.logistic
         logger.info("Training Logistic Regression (C=%.2f)", cfg.C)
@@ -339,16 +342,16 @@ class ModelTrainer:
 
         cv_auc = self._cross_validate_auc(model, X_train, y_train)
 
-        metrics = self._compute_metrics(
-            "logistic", model, X_test, y_test, cv_auc, train_time
-        )
+        metrics = self._compute_metrics("logistic", model, X_test, y_test, cv_auc, train_time)
 
-        logger.info("Logistic Regression trained in %.1fs (AUC: %.4f)",
-                     train_time, metrics.auc_roc)
+        logger.info("Logistic Regression trained in %.1fs (AUC: %.4f)", train_time, metrics.auc_roc)
 
         return TrainedModel(
-            name="logistic", model=model, metrics=metrics,
-            feature_names=feature_names, version="1.0.0",
+            name="logistic",
+            model=model,
+            metrics=metrics,
+            feature_names=feature_names,
+            version="1.0.0",
         )
 
     def _compute_metrics(
@@ -379,9 +382,7 @@ class ModelTrainer:
             n_test=len(y_test),
         )
 
-    def _cross_validate_auc(
-        self, model: Any, X: np.ndarray, y: np.ndarray
-    ) -> tuple[float, float]:
+    def _cross_validate_auc(self, model: Any, X: np.ndarray, y: np.ndarray) -> tuple[float, float]:
         """Run stratified k-fold cross-validation for AUC."""
         try:
             skf = StratifiedKFold(
@@ -402,13 +403,21 @@ class ModelTrainer:
 
     def _log_comparison(self) -> None:
         """Log a comparison table of all trained models."""
-        header = f"{'Model':<15} {'AUC-ROC':>8} {'AUC-PR':>8} {'F1':>8} {'Precision':>10} {'Recall':>8} {'Time':>8}"
+        header = (
+            f"{'Model':<15} {'AUC-ROC':>8} {'AUC-PR':>8} {'F1':>8} "
+            f"{'Precision':>10} {'Recall':>8} {'Time':>8}"
+        )
         logger.info("\n%s\n%s", header, "-" * len(header))
         for name, tm in self.models.items():
             m = tm.metrics
             logger.info(
                 "%s %8.4f %8.4f %8.4f %10.4f %8.4f %6.1fs",
-                f"{name:<15}", m.auc_roc, m.auc_pr, m.f1, m.precision, m.recall,
+                f"{name:<15}",
+                m.auc_roc,
+                m.auc_pr,
+                m.f1,
+                m.precision,
+                m.recall,
                 m.train_time_seconds,
             )
 
